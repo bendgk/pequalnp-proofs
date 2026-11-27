@@ -60,10 +60,17 @@ whole optimisation round only 27x, because the rest of the round is serial CPU w
    GPU job at a time (`gpurun`, or the in-process lock in gpukit), short dispatches (20-50 ms) when the GPU also
    drives a display, a memory cap on device allocations (gpukit: 2 GiB per process unless raised explicitly).
 
+7. **Every backend runs inside the sandbox** (SECURITY.md). A CUDA backend goes in `src/<tool>/cuda/*.cu`, is
+   built by `make cuda` in `sandbox/Dockerfile.cuda`, and runs with `sandbox/run --gpu nvidia`. A ROCm or Vulkan
+   backend adds its own `Dockerfile.<backend>` on the same pattern (slim runtime stage, compiler only in the build
+   stage, pinned base) and a `--gpu` case in `sandbox/run`, in a separate pull request for review. A backend that
+   needs the network, a privileged container or a host mount beyond `--in`/`--out` is not accepted.
+8. **Source only.** No binaries, no pre-built kernels, no vendored SDKs. The agent that needs a backend builds it.
+
 ## Porting checklist for a new platform
 
-1. `make -C toolkit cpu` and `make -C toolkit check`. Fix compiler portability issues in place (keep clang and gcc
-   both working). Run `src/cktopt/tests/run_tests.sh` (single thread, short).
+1. `sandbox/run build` (CPU image) and the Quick start commands in README.md (both checkers on a seed, cktsat on kn4). Fix compiler portability issues in place (keep clang and gcc
+   both working). Run `src/cktopt/tests/run_tests.sh` inside the container (single thread, short).
 2. `bin/pnprun --status` and a tiny `bin/pnprun -c 1 -- true`: check `ps -Ao pid=,ppid=,rss=` works (the memory
    watchdog uses it).
 3. For leancheck on Linux, replace `/usr/bin/time -l` with GNU `time -v` parsing (only the memory report uses it).

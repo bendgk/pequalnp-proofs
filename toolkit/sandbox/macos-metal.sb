@@ -1,0 +1,55 @@
+(version 1)
+; macOS sandbox for the Metal tools (Docker on macOS runs a Linux VM and cannot reach the Apple GPU).
+; Used by sandbox/run for `build-metal` and `metal`: sandbox-exec -f macos-metal.sb -D TOOLKIT=... -D OUT=... -D TMP=...
+;
+; What it allows: run programs, read the system and developer tools, read the toolkit, write ONLY to the
+; toolkit's build output (bin/, build/), the run's output folder, and a private temp folder; talk to the GPU.
+; What it denies: all network, reading the user's home (except the toolkit), writing anywhere else.
+(deny default)
+
+(allow process-fork)
+(allow process-exec)
+(allow signal (target same-sandbox))
+(allow sysctl-read)
+(allow system-socket)            ; local unix sockets only; network is denied below
+(deny network*)
+
+; Reads: system, developer tools, the toolkit. Not the home folder.
+(allow file-read-metadata)
+(allow file-read*
+  (literal "/") (subpath "/System") (subpath "/usr") (subpath "/bin") (subpath "/sbin")
+  (subpath "/Library/Developer") (subpath "/Applications/Xcode.app")
+  (subpath "/Library/Apple") (subpath "/Library/Preferences")
+  (subpath "/private/var/db/dyld") (subpath "/private/var/db/timezone")
+  (literal "/private/var/db/xcode_select_link") (literal "/private/etc/localtime")
+  (subpath "/dev")
+  (subpath (param "TOOLKIT"))
+  (subpath (param "OUT"))
+  (subpath (param "TMP")))
+
+; Writes: build output, the run's output, private temp.
+(allow file-write*
+  (subpath (string-append (param "TOOLKIT") "/bin"))
+  (subpath (string-append (param "TOOLKIT") "/build"))
+  (subpath (string-append (param "TOOLKIT") "/.slots"))
+  (subpath (param "OUT"))
+  (subpath (param "TMP"))
+  (literal "/dev/null") (literal "/dev/stdout") (literal "/dev/stderr") (literal "/dev/tty"))
+
+; GPU: IOKit user clients and the Metal services.
+(allow iokit-open)
+(allow iokit-get-properties)
+(allow mach-lookup
+  (global-name "com.apple.MTLCompilerService")
+  (global-name "com.apple.gpumemd.source")
+  (global-name "com.apple.PowerManagement.control")
+  (global-name "com.apple.system.opendirectoryd.libinfo")
+  (global-name "com.apple.system.notification_center")
+  (global-name "com.apple.logd")
+  (global-name "com.apple.diagnosticd")
+  (global-name "com.apple.CoreServices.coreservicesd")
+  (global-name "com.apple.cfprefsd.daemon")
+  (global-name "com.apple.cfprefsd.agent")
+  (global-name "com.apple.xcrun"))
+(allow ipc-posix-shm-read* ipc-posix-shm-write-data)
+(allow user-preference-read)

@@ -1,0 +1,7 @@
+# Pinned by version AND sha256 (pip --require-hashes --only-binary=:all:). Wheels only: no setup.py ever runs.
+# To bump: fetch https://pypi.org/pypi/<name>/<version>/json, copy the sha256 of each manylinux wheel, review.
+python-sat==1.9.dev25 \
+    --hash=sha256:d39879ae52b47ceee10b0e7a6b4d732fc6f9325ac53b61534e5faf40edab4de0 \
+    --hash=sha256:3e9fa8ef6d99fc204824c294452b7099e7d9ec2797d55b4d548e755e3e5ccb99
+six==1.17.0 \
+    --hash=sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274

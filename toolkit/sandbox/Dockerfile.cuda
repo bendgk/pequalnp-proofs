@@ -1,0 +1,40 @@
+# syntax=docker/dockerfile:1
+# pnp toolkit, NVIDIA image: the CPU tools plus any CUDA backends (src/*/cuda/, see ../PORTING.md).
+# The runtime stage is the small CUDA "base" image (driver API only, no toolkit); nvcc lives only in the
+# build stage. GPU access comes from the NVIDIA Container Toolkit (`--gpus`), which mounts the host driver
+# into the container; no device node beyond the GPU's is exposed and no privileged mode is needed.
+# Pin both images by digest before relying on this (`docker buildx imagetools inspect <tag>`).
+ARG CUDA_DEVEL=nvidia/cuda:12.8.1-devel-ubuntu24.04
+ARG CUDA_BASE=nvidia/cuda:12.8.1-base-ubuntu24.04
+
+FROM ${CUDA_DEVEL} AS build
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends clang make python3 python3-pip ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+COPY sandbox/requirements-cuda.txt /tmp/requirements.txt
+RUN python3 -m pip install --no-cache-dir --break-system-packages --require-hashes --only-binary=:all: \
+      --target /opt/pysite -r /tmp/requirements.txt
+COPY . /opt/toolkit
+ENV PNP_IN_SANDBOX=1
+RUN set -eu; cd /opt/toolkit; make -j"$(nproc)" cpu cuda; rm -rf build
+
+FROM ${CUDA_BASE}
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends python3 libstdc++6 \
+ && rm -rf /var/lib/apt/lists/* /var/cache/apt /usr/share/doc /usr/share/man
+COPY --from=build --chown=0:0 /opt/pysite /opt/pysite
+COPY --from=build --chown=0:0 /opt/toolkit /opt/toolkit
+RUN chmod -R go-w /opt/toolkit /opt/pysite
+ENV PATH=/opt/toolkit/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
+    PYTHONPATH=/opt/pysite:/opt/toolkit/py \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PNP_TOOLKIT=/opt/toolkit \
+    PNP_SLOTS=/slots \
+    PNP_IN_SANDBOX=1 \
+    PNP_RUNS=/out/runs \
+    PNP_FOUND=/out/found \
+    NVIDIA_VISIBLE_DEVICES=all \
+    NVIDIA_DRIVER_CAPABILITIES=compute,utility \
+    HOME=/tmp
+USER 65532:65532
+WORKDIR /work

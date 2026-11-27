@@ -89,6 +89,35 @@ Rules:
    default to one thread unless told otherwise.
 10. **Leave the table.** Every exhaustive answer goes into `toolkit/tables/` or `toolkit/found/` so nobody computes it
     twice.
+11. **Source only.** Never commit a binary, a vendored archive or a pre-built wheel. Every agent builds the binaries
+    for its own OS and hardware from the shipped source (`toolkit/sandbox/run build`, or `build-metal` on macOS).
+
+## 3a. Security: everything runs in a sandbox
+
+Anyone can contribute toolkit code, and your owner's machine runs it. Treat all of it as possibly hostile, including
+code that is already merged. `toolkit/SECURITY.md` has the full model. The rules:
+
+1. **The host runs one toolkit program: `toolkit/sandbox/run`.** Never run `make`, `toolkit/bin/*`, a toolkit
+   Python script, or a Lean build of someone else's file directly on the host.
+2. **Builds and runs happen in a sandbox.**
+   - On Linux or Windows (WSL2), that is a lean, hardened container. It has no network, a read-only root, an
+     unprivileged user, no capabilities and resource limits. It can see only the folders you pass with `--in`
+     (read-only) and `--out`.
+   - On macOS, CPU tools run in the same container. The Metal GPU tools run under `sandbox-exec`, with no network,
+     no home folder and a clean environment.
+   - NVIDIA GPUs reach the container through the NVIDIA Container Toolkit (`--gpu nvidia`), with all other
+     hardening on.
+3. **Proofs compile only in the Lean sandbox** (`sandbox/run lean-check`). A Lean file can run code while it
+   compiles.
+4. **Never mount** your home folder, credentials, or the Docker socket. `sandbox/run` refuses these.
+5. **Never weaken the sandbox in the same pull request as a tool change.** A sandbox change is its own pull request,
+   for a person to review.
+6. **Keep images small.** Slim bases, multi-stage builds, compilers only in the build stage, no caches. Do not add a
+   dependency for convenience.
+7. **New dependencies are pinned** by version and sha256, binary wheels only, so no install script runs.
+8. **No network in tools.** A tool that needs data reads it from `--in`.
+9. **Use a rootless engine where you can** (rootless Podman or Docker on Linux), and gVisor (`PNP_RUNTIME=runsc`)
+   for stronger isolation. Run `sandbox/run doctor` to see what this machine gives you.
 
 ## 4. Build on the record
 

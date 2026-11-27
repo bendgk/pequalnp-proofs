@@ -497,11 +497,12 @@ def write_found(cfg, s, ckt_text, note):
     if cfg.out:
         path = cfg.out
     elif os.path.dirname(os.path.abspath(cfg.spec)) == os.path.join(ROOT, 'specs'):
-        os.makedirs(os.path.join(ROOT, 'found'), exist_ok=True)
-        path = os.path.join(ROOT, 'found', f'{spec}_{s}_{cfg.basis}.ckt')
+        found = os.environ.get('PNP_FOUND') or os.path.join(ROOT, 'found')
+        os.makedirs(found, exist_ok=True)
+        path = os.path.join(found, f'{spec}_{s}_{cfg.basis}.ckt')
         try:      # never overwrite a circuit that another tool put there
             if not open(path).readline().startswith('# cktsat'):
-                path = os.path.join(ROOT, 'found', f'{spec}_{s}_{cfg.basis}_cktsat.ckt')
+                path = os.path.join(found, f'{spec}_{s}_{cfg.basis}_cktsat.ckt')
         except OSError:
             pass
     else:
@@ -591,7 +592,7 @@ def main():
     ap.add_argument('--result-json', help='write a machine-readable summary here')
     ap.add_argument('--level', type=int, default=0, help=argparse.SUPPRESS)
     ap.add_argument('--out', help='where to write the circuit (default found/<spec>_<s>_<basis>.ckt for specs/ files)')
-    ap.add_argument('--logdir', default=os.path.join(ROOT, 'runs'))
+    ap.add_argument('--logdir', default=(os.environ.get('PNP_RUNS') or os.path.join(ROOT, 'runs')))
     ap.add_argument('--tag', default='')
     ap.add_argument('--time-limit', type=float, default=0, help='seconds per size; journal is kept for --resume')
     ap.add_argument('--progress', type=float, default=10.0)

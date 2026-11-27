@@ -1,0 +1,50 @@
+# Toolkit pull requests: build the CPU image from source and run the smoke tests inside the hardened container.
+# Runs only when toolkit/ changes. Read-only token, no secrets, pull_request (never pull_request_target), so code
+# from a fork runs with no credentials. It judges nothing about proofs; authoritative.yml is untouched.
+name: toolkit-sandbox
+
+on:
+  pull_request:
+    paths: ['toolkit/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: toolkit-sandbox-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  sandbox:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: No binaries in the toolkit
+        run: |
+          set -eu
+          bad=$(git ls-files toolkit | while read -r f; do file -b "$f" | grep -qiE 'ELF|Mach-O|PE32|archive|compressed' && echo "$f"; done || true)
+          [ -z "$bad" ] || { echo "binary files are not accepted (source only):"; echo "$bad"; exit 1; }
+      - name: Build the CPU image (portable)
+        run: docker build -f toolkit/sandbox/Dockerfile --build-arg NATIVE=0 -t pnp-toolkit-cpu:local toolkit
+      - name: Smoke tests inside the sandbox
+        run: |
+          set -eu
+          R=toolkit/sandbox/run
+          export PNP_ENGINE=docker
+          $R -- cktcheck /opt/toolkit/specs/cand32.spec /opt/toolkit/seeds/cand32_207.ckt --basis aon
+          $R -- pyrun /opt/toolkit/py/pnpfast.py check /opt/toolkit/specs/cand32.spec /opt/toolkit/seeds/cand32_207.ckt
+          $R --cores 2 -- cktsat /opt/toolkit/specs/kn4.spec --basis ao --min | grep -q 'MINIMUM kn4 basis=ao: 7'
+          $R --in toolkit/out/found -- cktcheck /opt/toolkit/specs/kn4.spec /in/found/kn4_7_ao.ckt --basis ao
+      - name: The sandbox holds
+        run: |
+          set -eu
+          R=toolkit/sandbox/run
+          export PNP_ENGINE=docker
+          ! $R -- python3 -c "import socket; socket.create_connection(('1.1.1.1', 443), timeout=3)"
+          ! $R -- sh -c 'touch /opt/toolkit/x'
+          $R -- sh -c 'test "$(id -u)" != 0 && grep -q "CapEff:\s*0000000000000000" /proc/self/status'
+          ! $R --in "$HOME" -- true

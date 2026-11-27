@@ -1,0 +1,170 @@
+#!/usr/bin/env bash
+# sandbox/run — the ONLY toolkit program that runs on the host. Everything else (builds, searches, checks,
+# Lean compiles) runs inside a container, or on macOS for the Metal tools inside sandbox-exec.
+# Keep this file short and reviewed: it is the security boundary. See ../SECURITY.md.
+#
+#   sandbox/run doctor                         what engine, GPU and isolation this machine gives
+#   sandbox/run build [cpu|cuda|lean]          build an image from the shipped source (default cpu)
+#   sandbox/run [opts] -- <cmd> [args...]      run a toolkit command in the CPU (or GPU) image
+#       --in DIR      mount DIR read-only at /in/<basename> (repeatable)
+#       --out DIR     mount DIR read-write at /out and run there (default: toolkit/out/)
+#       --cores N     CPU limit (default: $PNP_THREADS or 1)    --mem GB  memory limit (default 4)
+#       --gpu auto|none|nvidia|amd                (default auto: NVIDIA if the engine has it, else none)
+#   sandbox/run build-metal                    macOS: build the Metal tools inside sandbox-exec
+#   sandbox/run metal [--out DIR] -- <cmd>     macOS: run a Metal tool inside sandbox-exec
+#   sandbox/run lean-fetch                     fetch the pinned prebuilt Mathlib into a volume (network on,
+#                                              nothing from outside contributors is compiled in this step)
+#   sandbox/run lean-check FILE.lean           compile one proof file with no network (see bin/leancheck)
+#
+# Environment: PNP_ENGINE=docker|podman (default: podman if present, else docker); PNP_RUNTIME=runsc to run
+# containers under gVisor where installed (stronger kernel isolation, also with NVIDIA via nvproxy).
+set -euo pipefail
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
+TK="$(cd "$HERE/.." && pwd -P)"
+REPO="$(cd "$TK/.." && pwd -P)"
+ENGINE="${PNP_ENGINE:-$(command -v podman >/dev/null 2>&1 && echo podman || echo docker)}"
+IMG_CPU=pnp-toolkit-cpu:local IMG_CUDA=pnp-toolkit-cuda:local IMG_LEAN=pnp-toolkit-lean:local
+OS="$(uname -s)"
+
+die() { echo "sandbox/run: $*" >&2; exit 2; }
+
+# A mount is allowed only for a real directory that is not /, not the home folder itself, not a parent of the
+# home folder, not a credentials folder, and contains no engine socket. Paths are resolved first, so a
+# symlink cannot point a mount somewhere else.
+safe_dir() {
+  local d; d="$(cd "$1" 2>/dev/null && pwd -P)" || die "no such directory: $1"
+  case "$d" in /|/home|/Users|/root|/etc|/var|/private|/private/var|/System|/usr) die "refusing to mount $d";; esac
+  [ "$d" != "$(cd ~ && pwd -P)" ] || die "refusing to mount the home folder; mount a project folder instead"
+  case "$(cd ~ && pwd -P)/" in "$d"/*) die "refusing to mount $d: it contains the home folder";; esac
+  case "$d/" in */.ssh/*|*/.aws/*|*/.gnupg/*|*/.config/gh/*|*/.docker/*|*/.kube/*) die "refusing to mount credentials: $d";; esac
+  if find "$d" -maxdepth 3 -type s 2>/dev/null | grep -q .; then die "refusing to mount $d: it holds a socket"; fi
+  printf '%s' "$d"
+}
+
+# The container user: the caller's own uid/gid (never root), so files written to --out belong to the caller.
+# If the caller is root, a fixed unprivileged uid is used instead.
+if [ "$(id -u)" = 0 ]; then RUN_USER=65532:65532; else RUN_USER="$(id -u):$(id -g)"; fi
+
+hardening=(
+  --rm --init
+  --network none
+  --read-only
+  --cap-drop ALL
+  --security-opt no-new-privileges
+  --pids-limit 4096
+  --user "$RUN_USER"
+  --tmpfs /tmp:rw,nosuid,nodev,size=1g
+  --ulimit core=0
+)
+[ -n "${PNP_RUNTIME:-}" ] && hardening+=(--runtime "$PNP_RUNTIME")
+
+# Named volumes start owned by root; hand them to the run user once (a root container with only CAP_CHOWN).
+ensure_volume() {
+  local v="$1" img="$2"
+  "$ENGINE" volume inspect "$v" >/dev/null 2>&1 && return 0
+  "$ENGINE" volume create "$v" >/dev/null
+  "$ENGINE" run --rm --network none --cap-drop ALL --cap-add CHOWN --security-opt no-new-privileges \
+    --user 0:0 -v "$v:/v" "$img" chown "$RUN_USER" /v
+}
+
+have_nvidia() { "$ENGINE" info 2>/dev/null | grep -qi nvidia || command -v nvidia-ctk >/dev/null 2>&1; }
+
+cmd_doctor() {
+  echo "engine:   $ENGINE ($("$ENGINE" version --format '{{.Server.Version}}' 2>/dev/null || "$ENGINE" --version 2>/dev/null || echo missing))"
+  if "$ENGINE" info 2>/dev/null | grep -qi rootless; then echo "rootless: yes"
+  else echo "rootless: no (recommended on Linux: rootless podman or rootless docker)"; fi
+  "$ENGINE" info 2>/dev/null | grep -qi runsc && echo "gVisor:   available (PNP_RUNTIME=runsc)" || echo "gVisor:   not installed (optional)"
+  if have_nvidia; then echo "GPU:      NVIDIA through the container toolkit (--gpus)"
+  elif [ -e /dev/kfd ]; then echo "GPU:      AMD (/dev/kfd); no ROCm backend yet, see PORTING.md"
+  elif [ "$OS" = Darwin ]; then echo "GPU:      Apple Metal: use 'build-metal' and 'metal' (sandbox-exec; containers cannot reach it)"
+  else echo "GPU:      none found: the CPU tools run everywhere"; fi
+  for i in $IMG_CPU $IMG_CUDA $IMG_LEAN; do
+    "$ENGINE" image inspect "$i" >/dev/null 2>&1 && echo "image:    $i ($("$ENGINE" image inspect -f '{{.Size}}' "$i" | awk '{printf "%.0f MB", $1/1e6}'))"
+  done; true
+}
+
+cmd_build() {
+  case "${1:-cpu}" in
+    cpu)  "$ENGINE" build -f "$HERE/Dockerfile" -t "$IMG_CPU" "$TK" ;;
+    cuda) "$ENGINE" build -f "$HERE/Dockerfile.cuda" -t "$IMG_CUDA" "$TK" ;;
+    lean) "$ENGINE" build -f "$HERE/Dockerfile.lean" --build-arg "LEAN_TOOLCHAIN=$(cat "$REPO/lean/lean-toolchain")" -t "$IMG_LEAN" "$TK" ;;
+    *) die "build cpu|cuda|lean" ;;
+  esac
+}
+
+cmd_run() {
+  local mounts=() out="$TK/out" cores="${PNP_THREADS:-1}" mem=4 gpu=auto
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --in)    local d; d="$(safe_dir "$2")"; mounts+=(-v "$d:/in/$(basename "$d"):ro"); shift 2 ;;
+      --out)   out="$2"; shift 2 ;;
+      --cores) cores="$2"; shift 2 ;;
+      --mem)   mem="$2"; shift 2 ;;
+      --gpu)   gpu="$2"; shift 2 ;;
+      --) shift; break ;;
+      *) die "unknown option $1 (did you forget -- before the command?)" ;;
+    esac
+  done
+  [ $# -gt 0 ] || die "no command given"
+  [[ "$cores" =~ ^[0-9]+$ && "$mem" =~ ^[0-9]+$ ]] || die "--cores and --mem take whole numbers"
+  mkdir -p "$out"; out="$(safe_dir "$out")"
+  local img=$IMG_CPU gpuflags=()
+  case "$gpu" in
+    auto)   if have_nvidia && "$ENGINE" image inspect $IMG_CUDA >/dev/null 2>&1; then img=$IMG_CUDA; gpuflags=(--gpus all); fi ;;
+    nvidia) img=$IMG_CUDA; gpuflags=(--gpus all) ;;
+    amd)    gpuflags=(--device /dev/kfd --device /dev/dri --group-add video) ;;
+    none)   ;;
+    *) die "--gpu auto|none|nvidia|amd" ;;
+  esac
+  "$ENGINE" image inspect "$img" >/dev/null 2>&1 || die "image $img missing: run sandbox/run build first"
+  ensure_volume pnp-slots "$img"
+  exec "$ENGINE" run "${hardening[@]}" "${gpuflags[@]}" \
+    --cpus "$cores" --memory "${mem}g" --memory-swap "${mem}g" -e PNP_THREADS="$cores" \
+    -v pnp-slots:/slots "${mounts[@]}" -v "$out:/out:rw" -w /out "$img" "$@"
+}
+
+metal_sandbox() {
+  [ "$OS" = Darwin ] || die "the Metal sandbox is for macOS; on Linux use the containers"
+  local out="$1"; shift
+  mkdir -p "$out" "$TK/.cache/tmp" "$TK/bin" "$TK/build" "$TK/.slots"; out="$(safe_dir "$out")"
+  local tmp; tmp="$(cd "$TK/.cache/tmp" && pwd -P)"
+  # A clean environment: no tokens, no SSH agent, no cloud credentials reach the sandboxed process.
+  # Only the compiler selection is passed through (SDKROOT / DEVELOPER_DIR), never tokens or agents.
+  local keep=(); for v in SDKROOT DEVELOPER_DIR; do [ -n "${!v:-}" ] && keep+=("$v=${!v}"); done
+  exec env -i "${keep[@]}" PATH=/usr/bin:/bin:/usr/sbin:/sbin:"$TK/bin" HOME="$tmp" TMPDIR="$tmp/" \
+    PNP_IN_SANDBOX=1 PNP_TOOLKIT="$TK" PNP_SLOTS="$TK/.slots" PNP_THREADS="${PNP_THREADS:-1}" \
+    sandbox-exec -f "$HERE/macos-metal.sb" -D TOOLKIT="$TK" -D OUT="$out" -D TMP="$tmp" "$@"
+}
+
+cmd_lean_fetch() {
+  "$ENGINE" image inspect $IMG_LEAN >/dev/null 2>&1 || die "run sandbox/run build lean first"
+  ensure_volume pnp-lean-lake "$IMG_LEAN"
+  # Network on, but only the base repository's trusted files are used: the pinned lakefile and manifest.
+  exec "$ENGINE" run --rm --read-only --cap-drop ALL --security-opt no-new-privileges --user "$RUN_USER" \
+    --tmpfs /tmp:rw,nosuid,nodev,size=2g -v "$REPO/lean:/repo:ro" -v pnp-lean-lake:/lake "$IMG_LEAN" \
+    sh -c 'mkdir -p /lake/proj && tar -C /repo --exclude=./.lake --exclude=./PEqualNP/Outside -cf - . | tar -C /lake/proj -xf - \
+           && cd /lake/proj && lake exe cache get && lake build PEqualNP.Defs'
+}
+
+# The proof is compiled with the Mathlib volume mounted READ-ONLY, so a hostile file cannot poison the cache
+# for later checks; the compiled output goes to the container's private /tmp and is discarded.
+cmd_lean_check() {
+  local f="${1:-}"; [ -f "$f" ] || die "lean-check FILE.lean"
+  local d; d="$(safe_dir "$(dirname "$f")")"
+  exec "$ENGINE" run "${hardening[@]}" --cpus "${PNP_THREADS:-2}" --memory 8g --memory-swap 8g \
+    -v pnp-lean-lake:/lake:ro -v "$d:/in:ro" -w /lake/proj "$IMG_LEAN" \
+    lake env lean -o /tmp/check.olean "/in/$(basename "$f")"
+}
+
+case "${1:-}" in
+  doctor)      shift; cmd_doctor ;;
+  build)       shift; cmd_build "$@" ;;
+  build-metal) shift; metal_sandbox "$TK/out" make -C "$TK" gpu ;;
+  metal)       shift; out="$TK/out"; [ "${1:-}" = --out ] && { out="$2"; shift 2; }; [ "${1:-}" = -- ] && shift
+               [ $# -gt 0 ] || die "metal -- <cmd>"; metal_sandbox "$out" "$@" ;;
+  lean-fetch)  shift; cmd_lean_fetch ;;
+  lean-check)  shift; cmd_lean_check "$@" ;;
+  ""|-h|--help) sed -n '2,24p' "$0" ;;
+  *)           cmd_run "$@" ;;
+esac

@@ -1,0 +1,18 @@
+# Build context is toolkit/ only. Nothing from the rest of the repo, the user's home, or build output gets in.
+bin/*
+!bin/andsat
+!bin/ckt2lean
+!bin/cktsat
+!bin/gpurun
+!bin/leancheck
+!bin/pnprun
+!bin/pyrun
+!bin/satpy
+build/
+.cache/
+.slots/
+out/
+**/__pycache__
+**/*.o
+**/.DS_Store
+out/

@@ -1,7 +1,7 @@
 """Markdown table of every finished cktsat run: bin/satpy src/cktsat/summarize.py [runs-dir ...]"""
 import glob, json, os, sys
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-dirs = sys.argv[1:] or [os.path.join(ROOT, 'runs')]
+dirs = sys.argv[1:] or [(os.environ.get('PNP_RUNS') or os.path.join(ROOT, 'runs'))]
 rows = []
 for d in dirs:
     for f in sorted(glob.glob(os.path.join(d, 'cktsat_*.json'))):

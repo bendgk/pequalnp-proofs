@@ -52,8 +52,32 @@ endif
 METAL_FW := -framework Metal -framework Foundation -framework CoreGraphics
 
 .PHONY: all cpu gpu check clean
+# Builds and runs belong in the sandbox (sandbox/run; SECURITY.md). Building on the bare host is refused
+# unless PNP_IN_SANDBOX=1 (set inside the images and by sandbox/run's macOS Metal sandbox) or the owner of the
+# machine opts in with PNP_HOST_BUILD=1 after reading the diff. This guards honest agents against an
+# accidental host build; it is not the security boundary (a hostile Makefile could delete it). The boundary
+# is that the host only ever runs sandbox/run, which is short and reviewed.
+ifneq ($(PNP_IN_SANDBOX)$(PNP_HOST_BUILD),)
+else ifneq ($(filter-out clean,$(or $(MAKECMDGOALS),all)),)
+  $(error Refusing to build on the host. Use toolkit/sandbox/run build (or set PNP_HOST_BUILD=1 if you reviewed the source))
+endif
+
 all: cpu gpu
 cpu: $(CPU_BINS)
+
+# CUDA backends: every src/<tool>/cuda/*.cu becomes bin/<tool>-cuda (see PORTING.md). None exist yet.
+NVCC    ?= nvcc
+CU_SRCS := $(wildcard src/*/cuda/*.cu)
+.PHONY: cuda
+cuda:
+ifeq ($(strip $(CU_SRCS)),)
+	@echo "cuda: no CUDA backend in src/*/cuda/ yet. See PORTING.md to add one."
+else
+	@command -v $(NVCC) >/dev/null || { echo "cuda: nvcc not found"; exit 1; }
+	@mkdir -p $(BIN)
+	@for f in $(CU_SRCS); do t=$$(echo $$f | cut -d/ -f2); echo "nvcc $$f -> $(BIN)/$$t-cuda"; \
+	  $(NVCC) -O3 -std=c++20 -Iinclude -o $(BIN)/$$t-cuda $$f || exit 1; done
+endif
 gpu: $(GPU_BINS)
 ifneq ($(UNAME_S),Darwin)
 	@echo "gpu: skipped — the only GPU backend today is Apple Metal (macOS). See PORTING.md to add one."

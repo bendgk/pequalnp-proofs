@@ -93,7 +93,7 @@ def main():
     a = ap.parse_args()
     rng = random.Random(a.seed)
     bad = 0; hist = {}
-    with tempfile.TemporaryDirectory(dir=os.path.join(ROOT, 'runs')) as td:
+    with tempfile.TemporaryDirectory(dir=(os.environ.get('PNP_RUNS') or os.path.join(ROOT, 'runs'))) as td:
         for t in range(a.n):
             kind = rng.choice(['tt', 'points', 'graph', 'sym', 'sym', 'sym']); basis = rng.choice(['ao', 'aon', 'aon', 'ao2'])
             path = os.path.join(td, f't{t}.spec')
@@ -132,7 +132,7 @@ def main():
             hist[key] = hist.get(key, 0) + 1
             if not ok:
                 bad += 1
-                keep = os.path.join(ROOT, 'runs', f'selftest_fail_{a.seed}_{t}.spec')
+                keep = os.path.join(os.environ.get('PNP_RUNS') or os.path.join(ROOT, 'runs'), f'selftest_fail_{a.seed}_{t}.spec')
                 open(keep, 'w').write(open(path).read())
                 print(f'MISMATCH test {t} {kind} {basis}: {why} brute_full={bf} brute_normal={bn} {res}  spec kept at {keep}')
             else:

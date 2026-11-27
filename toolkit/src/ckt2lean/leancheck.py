@@ -378,7 +378,7 @@ def main():
     fp_s = '%.2f GB' % fp if fp is not None else 'n/a'
     wall = time.time() - t0
     log = ''.join(out)
-    logdir = os.path.join(ROOT, 'runs', 'ckt2lean')
+    logdir = os.path.join(os.environ.get('PNP_RUNS') or os.path.join(ROOT, 'runs'), 'ckt2lean')
     os.makedirs(logdir, exist_ok=True)
     logpath = os.path.join(logdir, 'leancheck_%s.log' % bmod)
     open(logpath, 'w').write(log)

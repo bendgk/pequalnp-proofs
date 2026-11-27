@@ -113,7 +113,7 @@ def subcube_lower(rows, T4):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('out')
-    ap.add_argument('--state', default=os.path.join(ROOT, 'runs', 'startab', 'enc8.state.jsonl'))
+    ap.add_argument('--state', default=os.path.join(os.environ.get('PNP_RUNS') or os.path.join(ROOT, 'runs'), 'startab', 'enc8.state.jsonl'))
     ap.add_argument('--conf', type=int, default=300000, help='conflict limit per SAT call')
     ap.add_argument('--budget', type=float, default=0, help='stop starting new SAT calls after SEC seconds')
     ap.add_argument('--smax', type=int, default=14)

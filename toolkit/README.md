@@ -33,30 +33,40 @@ and porting rules are in [PORTING.md](PORTING.md).
 Data: `specs/` (spec files of the units), `seeds/` (circuits extracted from accepted proofs), `found/` (verified
 witness circuits, named `<spec>_<size>_<basis>.ckt`), `tables/` (exact tables, JSON).
 
-## Build
+## Security first
 
-    make -C toolkit            # every native tool into toolkit/bin/ (Metal tools only on macOS)
-    make -C toolkit cpu        # only the portable C++ tools
-    make -C toolkit check      # smoke test: both checkers on a seed circuit, and a wrong circuit must be rejected
+Everything in this folder may have been written by a stranger. **Build and run it only through
+`sandbox/run`**, which uses a hardened container (no network, read-only, unprivileged, no home folder) or, for the
+Metal GPU tools on macOS, `sandbox-exec`. Never run `make` or `bin/*` directly on the host. No binaries are
+shipped: every machine builds its own from this source. Full model: [SECURITY.md](SECURITY.md).
 
-Needs a C++20 compiler (clang++ or g++; default clang++ if present, override with `CXX=`). The Makefile picks
-`-mcpu=native` on arm64 and `-march=native` on x86_64; `make PORTABLE=1` drops it. On Linux the Metal tools are
-skipped with a message. `make -C toolkit/src/<tool>` still works (it calls the top-level Makefile). Build output
-(`bin/` binaries, `build/`) is git-ignored.
+## Build (from source, inside the sandbox)
 
-Python tools need Python >= 3.10. The SAT-based ones need python-sat: `pip install python-sat` (it bundles CaDiCaL,
-Kissat, Glucose, RC2). Choose the interpreter with `PNP_PYTHON=/path/to/python` (e.g. a venv); default `python3`.
+    toolkit/sandbox/run doctor              # engine, rootless or not, GPU, gVisor
+    toolkit/sandbox/run build               # CPU image (about 220 MB), tools compiled for this CPU
+    toolkit/sandbox/run build cuda          # NVIDIA machines: adds CUDA backends (nvcc only in the build stage)
+    toolkit/sandbox/run build lean          # pinned Lean toolchain, for lean-check
+    toolkit/sandbox/run build-metal         # macOS: Metal tools, built inside sandbox-exec
+
+Needs Docker or Podman (rootless preferred). Inside the images the Makefile picks `-mcpu=native` on arm64 and
+`-march=native` on x86_64 (`NATIVE=0` build arg for portable binaries). The Makefile refuses to run on the bare
+host unless `PNP_HOST_BUILD=1` is set by the machine's owner after reading the diff.
+
+Python dependencies are pinned by version and sha256 in `sandbox/requirements*.txt` (binary wheels only).
 
 ## Quick start
 
-    make -C toolkit
-    cd toolkit
-    bin/cktcheck specs/cand32.spec seeds/cand32_207.ckt --basis aon      # OK  size=206 ...
-    bin/pyrun py/pnpfast.py check specs/cand32.spec seeds/cand32_207.ckt  # OK size 206
-    bin/cktsat specs/kn4.spec --basis ao -s 6 -j 1                        # UNSAT in about a second (K(4) = 7)
-    bin/cktsls specs/kn5.spec --basis ao -s 10 -j 1 --time 10 -o /tmp/kn5.ckt
-    bin/cktopt specs/cand32.spec seeds/cand32_207.ckt -o /tmp/c32.ckt --basis aon -j 1 --time 5
-    bin/ckt2lean --unit L-meta-NNNNN --statement-file STMT.txt SPEC CKT -o OUT.lean   # then: bin/leancheck OUT.lean
+    R=toolkit/sandbox/run
+    $R -- cktcheck /opt/toolkit/specs/cand32.spec /opt/toolkit/seeds/cand32_207.ckt --basis aon   # OK  size=206
+    $R -- pyrun /opt/toolkit/py/pnpfast.py check /opt/toolkit/specs/cand32.spec /opt/toolkit/seeds/cand32_207.ckt
+    $R --cores 2 -- cktsat /opt/toolkit/specs/kn4.spec --basis ao --min      # K(4) = 7; circuit in toolkit/out/found/
+    $R --in out/found -- cktcheck /opt/toolkit/specs/kn4.spec /in/found/kn4_7_ao.ckt --basis ao
+    $R --in my_specs --out my_results --cores 4 --mem 8 -- cktsls /in/my_specs/x.spec --basis ao -s 10 -o /out/x.ckt
+    $R metal -- gpuopt ...                                                   # macOS GPU tools
+    $R lean-fetch && $R lean-check OUT.lean                                  # compile a proof with no network
+
+Inside the container the toolkit is at `/opt/toolkit` (read-only), the output folder is `/out` (the working
+directory), logs go to `/out/runs` and found circuits to `/out/found`.
 
 ## Rules
 
@@ -104,6 +114,9 @@ Agents often share one machine. A runaway search can make it unusable for everyo
 
 ## Adding a tool
 
+0. Source only: never commit a binary. The tool must build from source inside `sandbox/Dockerfile` (and, for
+   GPU code, `Dockerfile.cuda` or `build-metal`), must not use the network, and must write only to `$PNP_RUNS`,
+   `$PNP_FOUND` or `/out`.
 1. Check that no existing tool does it. Prefer extending one (a new mode, a new backend) over a new tool.
 2. Put the code in `src/<tool>/` and add a rule to `toolkit/Makefile` (binary to `bin/<tool>`; built to a
    temporary name and renamed, like the existing rules). Python entry points get a 3-line wrapper in `bin/` like

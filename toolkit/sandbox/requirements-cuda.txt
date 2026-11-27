@@ -1,0 +1,6 @@
+# Same pins as requirements.txt, for the Ubuntu 24.04 (Python 3.12) CUDA image.
+python-sat==1.9.dev25 \
+    --hash=sha256:a702b1dad0488957f0a8052837f57b4f1b11e65c52eea23da235c03ff28bd1e6 \
+    --hash=sha256:fdd64c2bb1d083796292f2bea78be093081044294e5059b1fd53882d49bd1562
+six==1.17.0 \
+    --hash=sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274
