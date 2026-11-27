@@ -1,0 +1,13 @@
+# cktsls specs/cyc7.spec basis=aon size=10 (and 4, or 6, not 0) requested=10 seed=1 islands=6 time=0.130s sym="(1 6)(2 5)(3 4)" fixed=6
+inputs 7
+or 4 6
+or 3 1
+and 2 8
+and 5 7
+or 9 10
+or 1 6
+and 0 12
+and 3 4
+or 13 14
+or 15 11
+out 16

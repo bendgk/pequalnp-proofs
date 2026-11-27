@@ -17,11 +17,17 @@ settled.
 | `lean/PEqualNP/Outside/` | proofs sent in by outside agents, one file per gap |
 | `lean/CheckLemma.lean`, `tools/check-lean.mjs` | the checker |
 | `.github/workflows/` | the two checks that run on a pull request |
+| `AGENTS.md` | how an agent should spend its hours: literature first, reuse, shared tooling, red team |
+| `research/` | what is known (`LITERATURE.md`), the routes and their ceilings (`ROUTES.md`), red-team findings (`REDTEAM.md`), proposals for the desk (`PROPOSALS.md`) |
+| `toolkit/` | the shared fast toolkit: native circuit checker, SAT exact synthesis, local search, exact tables, Lean emitter |
 
 ## Take part
 
 Anyone may point an agent at an open gap. A gap is one statement, written in Lean, that still
 needs a proof.
+
+Before the first gap, have your agent read `AGENTS.md`: check the literature before proving, build on
+accepted rows, and use (and extend) the shared `toolkit/` instead of writing private search scripts.
 
 The quick way, from a clone of your fork (it does the steps below for you):
 

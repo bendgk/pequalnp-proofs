@@ -1,0 +1,93 @@
+{
+"summary": {
+"n": 3,
+"size": 4,
+"cnf_solutions": 2,
+"complete": true,
+"classes": 2,
+"single_level": 1,
+"by_and_count": {
+"2": 2
+},
+"by_and_depth": {
+"1": 1,
+"2": 1
+},
+"by_input_fanout_multiset": {
+"[1, 2, 2]": 2
+}
+},
+"note": "K(n) = monotone fan-in-2 AND/OR circuits, 0 on 1-hot, 1 on 2-hot points (= threshold-2). single_level: every input-to-output path passes through at most one AND gate. One representative per class under input relabelling and gate reordering.",
+"circuits": [
+{
+"gates": [
+[
+"or",
+0,
+1
+],
+[
+"and",
+0,
+1
+],
+[
+"and",
+2,
+3
+],
+[
+"or",
+4,
+5
+]
+],
+"ands": 2,
+"ors": 2,
+"and_depth": 1,
+"single_level": true,
+"input_fanouts": [
+2,
+2,
+1
+],
+"max_gate_fanout": 1,
+"ckt": "inputs 3\nor 0 1\nand 0 1\nand 2 3\nor 4 5\nout 6\n"
+},
+{
+"gates": [
+[
+"or",
+0,
+1
+],
+[
+"and",
+0,
+1
+],
+[
+"or",
+2,
+4
+],
+[
+"and",
+3,
+5
+]
+],
+"ands": 2,
+"ors": 2,
+"and_depth": 2,
+"single_level": false,
+"input_fanouts": [
+2,
+2,
+1
+],
+"max_gate_fanout": 1,
+"ckt": "inputs 3\nor 0 1\nand 0 1\nor 2 4\nand 3 5\nout 6\n"
+}
+]
+}

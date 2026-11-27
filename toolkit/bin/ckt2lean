@@ -1,0 +1,5 @@
+#!/bin/sh
+# ckt2lean: verified circuit (.ckt) -> Lean 4 proof file in the shape the pequalnp.com checker accepts. See docs/ckt2lean.md
+# Needs bin/cktcheck (make -C toolkit). No python-sat needed.
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+exec "$ROOT/bin/pyrun" "$ROOT/src/ckt2lean/ckt2lean.py" "$@"

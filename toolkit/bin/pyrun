@@ -1,0 +1,6 @@
+#!/bin/sh
+# pyrun — run a Python script with the toolkit's py/ on the path (no python-sat needed).
+# Interpreter: $PNP_PYTHON, else python3 (needs Python >= 3.10).  Use bin/satpy for scripts that import pysat.
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+PY="${PNP_PYTHON:-python3}"
+PYTHONPATH="$ROOT/py${PYTHONPATH:+:$PYTHONPATH}" exec "$PY" "$@"

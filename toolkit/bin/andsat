@@ -1,0 +1,4 @@
+#!/bin/sh
+# andsat — AND-complexity of one bipartite graph by SAT (see docs/andtab.md).  Usage: bin/andsat graph|family|table ...
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+exec "$ROOT/bin/satpy" "$ROOT/src/andtab/andsat.py" "$@"

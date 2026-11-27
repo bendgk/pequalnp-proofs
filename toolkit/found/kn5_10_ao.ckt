@@ -1,0 +1,13 @@
+# cktsat: kn5 basis ao size 10, cube "and 0 1;or 0 1;and 2 3;or 2 3", wall 7.91s cpu 7.67s -j 1
+inputs 5
+and 0 1
+or 0 1
+and 2 3
+or 2 3
+or 4 5
+and 6 9
+or 6 9
+and 8 11
+or 10 12
+or 7 13
+out 14

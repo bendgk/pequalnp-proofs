@@ -1,0 +1,11 @@
+# cktsat: cyc6 basis aon size 8, cube "or 0 2;or 0 4;or 2 4", wall 22.61s cpu 21.47s -j 1
+inputs 6
+or 0 2
+or 0 4
+or 2 4
+and 1 6
+and 5 7
+and 3 8
+or 9 11
+or 10 12
+out 13

@@ -1,0 +1,163 @@
+#!/usr/bin/env python3
+"""pnprun — core-slot semaphore + memory watchdog for heavy jobs on a shared machine.
+
+    pnprun -c CORES [-m GB] [-t SECONDS] [--nowait] [--urgent] -- cmd args...
+    (--urgent: for the agreed top-priority run; other jobs queue behind a waiting urgent job)
+
+Takes CORES of the machine-wide slots, waits until that many are free,
+runs the command with PNP_THREADS=CORES, and kills it if its process-tree RSS exceeds GB (default 6)
+or it runs longer than SECONDS. Slots are flock()ed files, so they free themselves if we die.
+    pnprun --status      show which slots are held
+
+Environment:
+    PNP_SLOTS       directory of the slot lock files (default: <toolkit>/.slots). Every user of the machine
+                    must point at the same directory for the semaphore to work.
+    PNP_MAX_SLOTS   total number of core slots (default: the number of CPU cores). Set it lower to keep
+                    cores free for interactive use.
+"""
+import fcntl, os, signal, subprocess, sys, time
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SLOTS = os.environ.get("PNP_SLOTS") or os.path.join(ROOT, ".slots")
+TOTAL = int(os.environ.get("PNP_MAX_SLOTS") or os.environ.get("PNP_TOTAL_SLOTS") or os.cpu_count() or 1)
+
+
+def tree_rss_gb(pid):
+    try:
+        out = subprocess.run(["ps", "-Ao", "pid=,ppid=,rss="], capture_output=True, text=True).stdout
+    except Exception:
+        return 0.0
+    kids, rss = {}, {}
+    for line in out.splitlines():
+        p = line.split()
+        if len(p) != 3:
+            continue
+        a, b, r = int(p[0]), int(p[1]), int(p[2])
+        kids.setdefault(b, []).append(a)
+        rss[a] = r
+    tot, stack = 0, [pid]
+    while stack:
+        x = stack.pop()
+        tot += rss.get(x, 0)
+        stack.extend(kids.get(x, []))
+    return tot / 1048576.0
+
+
+def status():
+    os.makedirs(SLOTS, exist_ok=True)
+    held = 0
+    for i in range(TOTAL):
+        path = os.path.join(SLOTS, f"slot{i}.lock")
+        fd = os.open(path, os.O_RDWR | os.O_CREAT, 0o644)
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            fcntl.flock(fd, fcntl.LOCK_UN)
+        except OSError:
+            held += 1
+            try:
+                print(f"slot{i}: {open(path).read().strip()}")
+            except Exception:
+                print(f"slot{i}: held")
+        os.close(fd)
+    print(f"{held}/{TOTAL} slots held")
+
+
+def main():
+    a = sys.argv[1:]
+    if a and a[0] == "--status":
+        return status()
+    cores, mem, tmax, nowait, urgent = 1, 6.0, None, False, False
+    while a and a[0] != "--":
+        if a[0] == "-c": cores = int(a[1]); a = a[2:]
+        elif a[0] == "-m": mem = float(a[1]); a = a[2:]
+        elif a[0] == "-t": tmax = float(a[1]); a = a[2:]
+        elif a[0] == "--nowait": nowait = True; a = a[1:]
+        elif a[0] == "--urgent": urgent = True; a = a[1:]
+        else: sys.exit(__doc__)
+    if not a or a[0] != "--" or len(a) < 2:
+        sys.exit(__doc__)
+    cmd = a[1:]
+    if cores < 1 or cores > TOTAL:
+        sys.exit(f"pnprun: -c must be 1..{TOTAL}")
+    os.makedirs(SLOTS, exist_ok=True)
+    held = []
+    waited = False
+    marker = os.path.join(SLOTS, f"urgent.{os.getpid()}")
+    if urgent:
+        open(marker, "w").write(" ".join(cmd)[:200])
+
+    def urgent_waiting():
+        # another job marked --urgent is still waiting for slots: let it go first
+        for f in os.listdir(SLOTS):
+            if f.startswith("urgent.") and f != os.path.basename(marker):
+                try:
+                    os.kill(int(f.split(".")[1]), 0)
+                    return True
+                except (OSError, ValueError):
+                    try: os.unlink(os.path.join(SLOTS, f))
+                    except OSError: pass
+        return False
+    while True:
+        if not urgent and urgent_waiting():
+            if not waited:
+                print("pnprun: an urgent job is waiting for slots; queued behind it...", file=sys.stderr, flush=True)
+                waited = True
+            time.sleep(3)
+            continue
+        for i in range(TOTAL):
+            if len(held) >= cores:
+                break
+            path = os.path.join(SLOTS, f"slot{i}.lock")
+            fd = os.open(path, os.O_RDWR | os.O_CREAT, 0o644)
+            try:
+                fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                held.append((fd, path))
+            except OSError:
+                os.close(fd)
+        if len(held) >= cores:
+            break
+        for fd, _ in held:           # all or nothing, so two waiters cannot deadlock
+            fcntl.flock(fd, fcntl.LOCK_UN); os.close(fd)
+        held = []
+        if nowait:
+            sys.exit("pnprun: not enough free slots")
+        if not waited:
+            print(f"pnprun: waiting for {cores} free slot(s)...", file=sys.stderr, flush=True)
+            waited = True
+        time.sleep(2 + (os.getpid() % 7) * 0.3)
+    if urgent:
+        try: os.unlink(marker)
+        except OSError: pass
+    tag = f"pid {os.getpid()} cores {cores} cmd {' '.join(cmd)[:120]}"
+    for fd, path in held:
+        os.ftruncate(fd, 0); os.pwrite(fd, tag.encode(), 0)
+    env = dict(os.environ, PNP_THREADS=str(cores))
+    p = subprocess.Popen(cmd, env=env, start_new_session=True)
+
+    def kill(why):
+        print(f"pnprun: killing job ({why})", file=sys.stderr, flush=True)
+        try: os.killpg(p.pid, signal.SIGKILL)
+        except Exception: pass
+
+    def on_sig(signum, frame):
+        kill(f"signal {signum}")
+        sys.exit(130)
+    signal.signal(signal.SIGINT, on_sig); signal.signal(signal.SIGTERM, on_sig)
+    t0 = time.time(); rc = None
+    while rc is None:
+        try:
+            rc = p.wait(timeout=3)
+        except subprocess.TimeoutExpired:
+            if tmax and time.time() - t0 > tmax:
+                kill(f"time limit {tmax}s"); rc = 124
+            else:
+                g = tree_rss_gb(p.pid)
+                if g > mem:
+                    kill(f"memory {g:.1f} GB > limit {mem} GB"); rc = 137
+    try: os.killpg(p.pid, signal.SIGKILL)   # no orphans
+    except Exception: pass
+    sys.exit(rc if rc >= 0 else 128 - rc)
+
+
+if __name__ == "__main__":
+    main()

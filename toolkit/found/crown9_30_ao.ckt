@@ -1,0 +1,33 @@
+# crown9 from found/kn9_21_ao.ckt: z_i = x_i or y_i, then the K(9) circuit; size 30
+inputs 18
+or 0 9
+or 1 10
+or 2 11
+or 3 12
+or 4 13
+or 5 14
+or 6 15
+or 7 16
+or 8 17
+or 19 23
+or 18 22
+or 18 21
+or 19 20
+or 25 30
+or 25 29
+or 22 24
+or 23 24
+or 26 27
+or 26 28
+and 36 31
+and 35 32
+or 37 34
+or 38 33
+or 20 40
+or 21 39
+or 35 32
+or 36 31
+and 42 44
+and 41 43
+or 45 46
+out 47

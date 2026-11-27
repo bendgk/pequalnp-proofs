@@ -1,0 +1,27 @@
+# cktsls specs/kn10.spec basis=ao size=24 (and 5, or 19, not 0) requested=24 seed=1 islands=13 time=77.851s sym="(0 1)(2 3)(4 5)(6 7)(8 9)" fixed=16
+inputs 10
+or 0 6
+or 1 7
+or 2 10
+or 3 11
+or 12 13
+or 4 5
+or 4 6
+or 5 7
+or 2 17
+or 3 16
+and 12 13
+or 0 1
+or 18 19
+or 8 9
+and 18 19
+or 23 15
+or 21 23
+and 14 25
+and 26 22
+or 24 28
+or 27 29
+or 20 30
+and 8 9
+or 31 32
+out 33

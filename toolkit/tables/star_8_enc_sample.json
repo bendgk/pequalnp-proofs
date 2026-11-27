@@ -1,0 +1,628 @@
+{
+ "n": 8,
+ "m": 8,
+ "encoder": true,
+ "inputs": [
+  "r0",
+  "r1",
+  "r2",
+  "r3",
+  "r4",
+  "r5",
+  "r6",
+  "r7",
+  "c0",
+  "c1",
+  "c2",
+  "c3",
+  "c4",
+  "c5",
+  "c6",
+  "c7",
+  "rb0=0",
+  "rb0=1",
+  "rb1=0",
+  "rb1=1",
+  "rb2=0",
+  "rb2=1",
+  "cb0=0",
+  "cb0=1",
+  "cb1=0",
+  "cb1=1",
+  "cb2=0",
+  "cb2=1"
+ ],
+ "semantics": "SAMPLE of named 8x8 graphs, sizes with the 16 stars plus the 12 free encoder wires as inputs (same model as star_4_enc.json). \"lower\" is proved: max of \"lower_sat\" (every smaller number of gates refuted by SAT in the normal-form model) and \"lower_subcube\" (largest exact 4x4 encoder size of a restriction obtained by fixing one row-index bit and one column-index bit). \"size\" is the smallest circuit found (checked with bin/cktcheck); \"exact\" iff size == lower. Labelled graphs; no symmetry reduction.",
+ "rows_convention": "bit v of rows[u] = A u v",
+ "classes": [
+  {
+   "name": "biclique_x2_y2",
+   "note": "K_{4,4}: x2 AND y2",
+   "rows": [
+    0,
+    0,
+    0,
+    0,
+    240,
+    240,
+    240,
+    240
+   ],
+   "mono": {
+    "size": 1,
+    "exact": true,
+    "lower": 1,
+    "witness": "inputs 28\nand 21 27\nout 28\n",
+    "lower_sat": 1,
+    "lower_subcube": 1
+   },
+   "not": {
+    "size": 1,
+    "exact": true,
+    "lower": 1,
+    "witness": "inputs 28\nand 21 27\nout 28\n",
+    "lower_sat": 1,
+    "lower_subcube": 1
+   }
+  },
+  {
+   "name": "intersect",
+   "note": "x AND y != 0 (OR_i x_i y_i)",
+   "rows": [
+    0,
+    170,
+    204,
+    238,
+    240,
+    250,
+    252,
+    254
+   ],
+   "mono": {
+    "size": 5,
+    "exact": true,
+    "lower": 5,
+    "witness": "inputs 28\nand 17 23\nand 19 25\nand 21 27\nor 28 30\nor 29 31\nout 32\n",
+    "lower_sat": 5,
+    "lower_subcube": 3
+   },
+   "not": {
+    "size": 5,
+    "exact": true,
+    "lower": 5,
+    "witness": "inputs 28\nand 17 23\nand 19 25\nand 21 27\nor 28 29\nor 30 31\nout 32\n",
+    "lower_sat": 5,
+    "lower_subcube": 3
+   }
+  },
+  {
+   "name": "disjoint",
+   "note": "x AND y = 0",
+   "rows": [
+    255,
+    85,
+    51,
+    17,
+    15,
+    5,
+    3,
+    1
+   ],
+   "mono": {
+    "size": 5,
+    "exact": true,
+    "lower": 5,
+    "witness": "inputs 28\nor 16 22\nor 18 24\nor 20 26\nand 28 29\nand 30 31\nout 32\n",
+    "lower_sat": 5,
+    "lower_subcube": 3
+   },
+   "not": {
+    "size": 5,
+    "exact": true,
+    "lower": 5,
+    "witness": "inputs 28\nor 16 22\nor 18 24\nor 20 26\nand 29 30\nand 28 31\nout 32\n",
+    "lower_sat": 5,
+    "lower_subcube": 3
+   }
+  },
+  {
+   "name": "equal_low2",
+   "note": "x1x0 = y1y0 (two disjoint copies of a 4x4 matching, blown up)",
+   "rows": [
+    17,
+    34,
+    68,
+    136,
+    17,
+    34,
+    68,
+    136
+   ],
+   "mono": {
+    "size": 7,
+    "exact": true,
+    "lower": 7,
+    "witness": "inputs 28\nor 17 22\nor 16 23\nor 19 24\nor 18 25\nand 29 30\nand 28 32\nand 31 33\nout 34\n",
+    "lower_sat": 7,
+    "lower_subcube": 7
+   },
+   "not": {
+    "size": 7,
+    "exact": true,
+    "lower": 7,
+    "witness": "inputs 28\nor 17 22\nor 16 23\nor 19 24\nor 18 25\nand 30 31\nand 29 32\nand 28 33\nout 34\n",
+    "lower_sat": 7,
+    "lower_subcube": 7
+   }
+  },
+  {
+   "name": "xor_bit0",
+   "note": "x0 XOR y0",
+   "rows": [
+    170,
+    85,
+    170,
+    85,
+    170,
+    85,
+    170,
+    85
+   ],
+   "mono": {
+    "size": 3,
+    "exact": true,
+    "lower": 3,
+    "witness": "inputs 28\nor 16 22\nor 17 23\nand 28 29\nout 30\n",
+    "lower_sat": 3,
+    "lower_subcube": 3
+   },
+   "not": {
+    "size": 3,
+    "exact": true,
+    "lower": 3,
+    "witness": "inputs 28\nor 16 22\nor 17 23\nand 28 29\nout 30\n",
+    "lower_sat": 3,
+    "lower_subcube": 3
+   }
+  },
+  {
+   "name": "xor_two",
+   "note": "(x0 XOR y0) OR (x1 XOR y1)",
+   "rows": [
+    238,
+    221,
+    187,
+    119,
+    238,
+    221,
+    187,
+    119
+   ],
+   "mono": {
+    "size": 7,
+    "exact": true,
+    "lower": 7,
+    "witness": "inputs 28\nor 16 22\nor 17 23\nand 19 24\nand 18 25\nand 28 29\nor 31 32\nor 30 33\nout 34\n",
+    "lower_sat": 7,
+    "lower_subcube": 7
+   },
+   "not": {
+    "size": 7,
+    "exact": true,
+    "lower": 7,
+    "witness": "inputs 28\nor 16 22\nor 17 23\nand 19 24\nand 18 25\nand 28 29\nor 31 32\nor 30 33\nout 34\n",
+    "lower_sat": 7,
+    "lower_subcube": 7
+   }
+  },
+  {
+   "name": "matching",
+   "note": "identity: u = v",
+   "rows": [
+    1,
+    2,
+    4,
+    8,
+    16,
+    32,
+    64,
+    128
+   ],
+   "mono": {
+    "size": 15,
+    "exact": false,
+    "lower": 8,
+    "witness": "inputs 28\nor 6 15\nor 7 14\nand 29 28\nand 3 11\nor 4 10\nand 1 9\nand 5 13\nand 0 8\nor 30 35\nor 2 12\nand 37 32\nor 38 33\nor 36 39\nor 40 31\nor 41 34\nout 42\n",
+    "lower_sat": 8,
+    "lower_subcube": 7,
+    "how": "stochastic search (bin/cktsls)"
+   },
+   "not": {
+    "size": 15,
+    "exact": false,
+    "lower": 7,
+    "witness": "inputs 28\nand 5 13\nand 7 15\nand 1 9\nand 2 10\nor 29 28\nor 30 32\nand 3 11\nand 4 12\nor 31 35\nand 6 14\nand 0 8\nor 38 34\nor 39 37\nor 33 40\nor 36 41\nout 42\n",
+    "lower_sat": 7,
+    "lower_subcube": 7,
+    "how": "stochastic search (bin/cktsls)"
+   }
+  },
+  {
+   "name": "crown",
+   "note": "crown: u != v",
+   "rows": [
+    254,
+    253,
+    251,
+    247,
+    239,
+    223,
+    191,
+    127
+   ],
+   "mono": {
+    "size": 11,
+    "exact": false,
+    "lower": 8,
+    "witness": "inputs 28\nand 16 23\nand 20 27\nand 18 25\nand 21 26\nand 19 24\nand 17 22\nor 30 33\nor 34 31\nor 29 35\nor 28 32\nor 37 36\nout 38\n",
+    "lower_sat": 8,
+    "lower_subcube": 7,
+    "how": "stochastic search (bin/cktsls)"
+   },
+   "not": {
+    "size": 11,
+    "exact": false,
+    "lower": 8,
+    "witness": "inputs 28\nand 19 24\nand 17 22\nand 16 23\nand 21 26\nand 20 27\nor 29 32\nand 18 25\nor 30 33\nor 28 35\nor 36 31\nor 37 34\nout 38\n",
+    "lower_sat": 8,
+    "lower_subcube": 7,
+    "how": "stochastic search (bin/cktsls)"
+   }
+  },
+  {
+   "name": "half_le",
+   "note": "half graph: u <= v",
+   "rows": [
+    255,
+    254,
+    252,
+    248,
+    240,
+    224,
+    192,
+    128
+   ],
+   "mono": {
+    "size": 9,
+    "exact": false,
+    "lower": 8,
+    "witness": "inputs 28\nor 20 27\nor 18 25\nand 28 29\nand 20 27\nand 18 25\nor 16 32\nor 23 33\nand 30 34\nor 35 31\nout 36\n",
+    "lower_sat": 8,
+    "lower_subcube": 5,
+    "how": "stochastic search (bin/cktsls)"
+   },
+   "not": {
+    "size": 9,
+    "exact": false,
+    "lower": 7,
+    "witness": "inputs 28\nor 16 23\nor 18 25\nand 28 29\nand 18 25\nor 30 31\nand 20 32\nor 20 32\nand 27 34\nor 35 33\nout 36\n",
+    "lower_sat": 7,
+    "lower_subcube": 5,
+    "how": "stochastic search (bin/cktsls)"
+   }
+  },
+  {
+   "name": "half_lt",
+   "note": "u < v",
+   "rows": [
+    254,
+    252,
+    248,
+    240,
+    224,
+    192,
+    128,
+    0
+   ],
+   "mono": {
+    "size": 9,
+    "exact": false,
+    "lower": 8,
+    "witness": "inputs 28\nand 16 23\nor 25 28\nand 18 29\nand 25 28\nor 31 30\nand 27 32\nor 27 32\nand 20 34\nor 33 35\nout 36\n",
+    "lower_sat": 8,
+    "lower_subcube": 5,
+    "how": "stochastic search (bin/cktsls)"
+   },
+   "not": {
+    "size": 9,
+    "exact": false,
+    "lower": 7,
+    "witness": "inputs 28\nand 16 23\nor 25 28\nand 18 29\nand 25 28\nor 30 31\nand 27 32\nor 27 32\nand 20 34\nor 33 35\nout 36\n",
+    "lower_sat": 7,
+    "lower_subcube": 5,
+    "how": "stochastic search (bin/cktsls)"
+   }
+  },
+  {
+   "name": "parity",
+   "note": "parity of all six bits",
+   "rows": [
+    150,
+    105,
+    105,
+    150,
+    105,
+    150,
+    150,
+    105
+   ],
+   "mono": {
+    "size": 15,
+    "exact": false,
+    "lower": 8,
+    "witness": "inputs 28\nor 1 4\nor 2 7\nor 10 15\nor 12 29\nor 31 30\nor 9 32\nor 28 33\nor 3 13\nor 6 35\nor 11 36\nor 0 37\nor 5 38\nor 8 39\nor 14 40\nand 41 34\nout 42\n",
+    "lower_sat": 8,
+    "lower_subcube": 7,
+    "how": "stochastic search (bin/cktsls)"
+   },
+   "not": {
+    "size": 11,
+    "exact": false,
+    "lower": 8,
+    "witness": "inputs 28\nor 9 12\nor 4 7\nor 2 29\nor 1 30\nor 10 31\nor 10 28\nor 15 33\nand 31 34\nnot 35\nor 34 32\nand 36 37\nout 38\n",
+    "lower_sat": 8,
+    "lower_subcube": 6,
+    "how": "stochastic search (bin/cktsls)"
+   }
+  },
+  {
+   "name": "ip",
+   "note": "inner product mod 2",
+   "rows": [
+    0,
+    170,
+    204,
+    102,
+    240,
+    90,
+    60,
+    150
+   ],
+   "mono": {
+    "size": 15,
+    "exact": false,
+    "lower": 9,
+    "witness": "inputs 28\nor 16 22\nand 21 27\nor 18 24\nand 23 30\nand 17 31\nor 32 29\nand 25 28\nand 19 34\nor 33 35\nand 30 28\nand 7 15\nor 26 38\nor 20 39\nor 40 37\nand 41 36\nout 42\n",
+    "lower_sat": 8,
+    "lower_subcube": 9,
+    "how": "stochastic search (bin/cktsls)"
+   },
+   "not": {
+    "size": 12,
+    "exact": false,
+    "lower": 8,
+    "witness": "inputs 28\nand 17 23\nand 19 25\nor 29 28\nand 29 28\nand 21 27\nor 32 31\nand 33 30\nnot 34\nand 7 15\nor 33 30\nor 35 36\nand 38 37\nout 39\n",
+    "lower_sat": 7,
+    "lower_subcube": 8,
+    "how": "stochastic search (bin/cktsls)"
+   }
+  },
+  {
+   "name": "sum_mod8_zero",
+   "note": "u + v = 0 mod 8 (a perfect matching)",
+   "rows": [
+    1,
+    128,
+    64,
+    32,
+    16,
+    8,
+    4,
+    2
+   ],
+   "mono": {
+    "size": 15,
+    "exact": false,
+    "lower": 8,
+    "witness": "inputs 28\nor 7 11\nor 5 9\nand 28 29\nand 0 8\nand 6 10\nor 32 31\nand 4 12\nand 2 14\nand 3 13\nand 1 15\nor 37 30\nor 38 35\nor 33 39\nor 40 36\nor 41 34\nout 42\n",
+    "lower_sat": 8,
+    "lower_subcube": 7,
+    "how": "stochastic search (bin/cktsls)"
+   },
+   "not": {
+    "size": 15,
+    "exact": false,
+    "lower": 7,
+    "witness": "inputs 28\nand 1 15\nand 3 13\nand 6 10\nand 2 14\nand 5 11\nand 4 12\nor 29 33\nand 0 8\nand 7 9\nor 36 30\nor 34 37\nor 32 38\nor 35 28\nor 39 31\nor 40 41\nout 42\n",
+    "lower_sat": 7,
+    "lower_subcube": 7,
+    "how": "stochastic search (bin/cktsls)"
+   }
+  },
+  {
+   "name": "cycle16",
+   "note": "Hamilton cycle C16: v in {u, u+1}",
+   "rows": [
+    3,
+    6,
+    12,
+    24,
+    48,
+    96,
+    192,
+    129
+   ],
+   "mono": {
+    "size": 17,
+    "exact": false,
+    "lower": 8,
+    "witness": "inputs 28\nand 21 27\nor 16 23\nor 19 24\nand 1 10\nand 7 8\nand 20 26\nor 18 25\nor 33 28\nand 35 34\nand 30 36\nand 37 29\nor 38 31\nand 3 12\nand 5 14\nor 41 40\nor 32 42\nor 43 39\nout 44\n",
+    "lower_sat": 8,
+    "lower_subcube": 7,
+    "how": "stochastic search (bin/cktsls)"
+   },
+   "not": {
+    "size": 16,
+    "exact": false,
+    "lower": 8,
+    "witness": "inputs 28\nor 16 23\nor 21 26\nor 18 28\nand 18 28\nor 20 27\nnot 31\nand 3 12\nor 25 31\nor 24 33\nand 35 30\nand 37 36\nand 38 32\nand 39 29\nor 34 40\nand 7 8\nor 42 41\nout 43\n",
+    "lower_sat": 8,
+    "lower_subcube": 7,
+    "how": "stochastic search (bin/cktsls)"
+   }
+  },
+  {
+   "name": "threshold_sum_ge7",
+   "note": "u + v >= 7",
+   "rows": [
+    128,
+    192,
+    224,
+    240,
+    248,
+    252,
+    254,
+    255
+   ],
+   "mono": {
+    "size": 9,
+    "exact": false,
+    "lower": 8,
+    "witness": "inputs 28\nor 19 25\nand 19 25\nor 23 29\nor 17 30\nand 31 28\nand 27 32\nor 21 33\nor 27 32\nand 34 35\nout 36\n",
+    "lower_sat": 8,
+    "lower_subcube": 5,
+    "how": "stochastic search (bin/cktsls)"
+   },
+   "not": {
+    "size": 9,
+    "exact": false,
+    "lower": 7,
+    "witness": "inputs 28\nor 19 25\nand 19 25\nor 17 29\nor 23 30\nand 28 31\nand 27 32\nor 21 33\nor 27 32\nand 35 34\nout 36\n",
+    "lower_sat": 7,
+    "lower_subcube": 5,
+    "how": "stochastic search (bin/cktsls)"
+   }
+  },
+  {
+   "name": "paley_like",
+   "note": "v - u in {1,2,4} mod 8 (circulant)",
+   "rows": [
+    208,
+    161,
+    67,
+    134,
+    13,
+    26,
+    52,
+    104
+   ],
+   "mono": {
+    "size": null,
+    "exact": false,
+    "lower": 9,
+    "witness": null,
+    "lower_sat": 8,
+    "lower_subcube": 9
+   },
+   "not": {
+    "size": 17,
+    "exact": false,
+    "lower": 8,
+    "witness": "inputs 28\nor 16 23\nor 21 27\nor 18 25\nand 28 30\nand 18 25\nor 17 32\nor 20 26\nand 29 34\nor 32 35\nor 36 31\nnot 37\nor 22 33\nand 39 35\nand 31 40\nor 38 41\nor 28 30\nand 42 43\nout 44\n",
+    "lower_sat": 8,
+    "lower_subcube": 8,
+    "how": "stochastic search (bin/cktsls)"
+   }
+  },
+  {
+   "name": "majority3",
+   "note": "MAJ(x0, x1, y0)",
+   "rows": [
+    0,
+    170,
+    170,
+    255,
+    0,
+    170,
+    170,
+    255
+   ],
+   "mono": {
+    "size": 4,
+    "exact": true,
+    "lower": 4,
+    "witness": "inputs 28\nand 19 23\nor 19 23\nor 17 28\nand 29 30\nout 31\n",
+    "lower_sat": 4,
+    "lower_subcube": 3
+   },
+   "not": {
+    "size": 4,
+    "exact": true,
+    "lower": 4,
+    "witness": "inputs 28\nor 19 23\nand 19 23\nor 17 29\nand 28 30\nout 31\n",
+    "lower_sat": 4,
+    "lower_subcube": 3
+   }
+  },
+  {
+   "name": "single_edge",
+   "note": "one edge",
+   "rows": [
+    0,
+    0,
+    0,
+    32,
+    0,
+    0,
+    0,
+    0
+   ],
+   "mono": {
+    "size": 1,
+    "exact": true,
+    "lower": 1,
+    "witness": "inputs 28\nand 3 13\nout 28\n",
+    "lower_sat": 1,
+    "lower_subcube": 1
+   },
+   "not": {
+    "size": 1,
+    "exact": true,
+    "lower": 1,
+    "witness": "inputs 28\nand 3 13\nout 28\n",
+    "lower_sat": 1,
+    "lower_subcube": 1
+   }
+  },
+  {
+   "name": "star_minus_point",
+   "note": "row star without one point",
+   "rows": [
+    254,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+   ],
+   "mono": {
+    "size": 3,
+    "exact": true,
+    "lower": 3,
+    "witness": "inputs 28\nor 10 23\nor 27 28\nand 0 29\nout 30\n",
+    "lower_sat": 3,
+    "lower_subcube": 2
+   },
+   "not": {
+    "size": 2,
+    "exact": true,
+    "lower": 2,
+    "witness": "inputs 28\nnot 8\nand 0 28\nout 29\n",
+    "lower_sat": 2,
+    "lower_subcube": 2
+   }
+  }
+ ]
+}

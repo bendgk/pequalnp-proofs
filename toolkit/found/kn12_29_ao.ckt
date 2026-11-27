@@ -1,0 +1,32 @@
+# cktsls specs/kn12.spec basis=ao size=29 (and 5, or 24, not 0) requested=29 seed=1 islands=14 time=1.819s shape=SPS:5
+inputs 12
+or 8 11
+or 3 12
+or 9 11
+or 2 14
+or 2 10
+or 4 16
+or 4 7
+or 1 8
+or 19 18
+or 0 5
+or 1 21
+or 17 13
+or 7 9
+or 6 24
+or 3 10
+or 5 26
+or 6 27
+or 0 15
+or 28 20
+or 25 23
+and 25 23
+and 29 30
+and 22 31
+and 17 13
+and 28 20
+or 33 35
+or 32 37
+or 36 38
+or 34 39
+out 40

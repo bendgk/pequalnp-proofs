@@ -1,0 +1,5 @@
+#!/bin/sh
+# leancheck: lint a proof file by the pequalnp.com rules, then build it in a sandbox clone of the Lean repo
+# ($PNP_LEAN_SANDBOX, default toolkit/.cache/proofs-sandbox). See docs/ckt2lean.md. No python-sat needed.
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+exec "$ROOT/bin/pyrun" "$ROOT/src/ckt2lean/leancheck.py" "$@"

@@ -1,0 +1,60 @@
+#!/usr/bin/env python3
+"""gpurun — one-slot GPU lock for heavy Metal jobs (on macOS the GPU is shared with the window server).
+
+    gpurun [--nowait] [-t SECONDS] -- cmd args...
+    gpurun --status
+
+Takes an exclusive flock on $GPUKIT_LOCK, else $PNP_SLOTS/gpu.lock, else <toolkit>/.slots/gpu.lock (waits until it is free), then exec()s the command with
+GPURUN_HELD=1 (gpukit then skips its own in-process lock). There is no wrapper process: the job itself
+holds the lock through the inherited descriptor, signals reach it directly, and the lock frees itself
+when the job (and every child it started) is gone. -t SECONDS arms SIGALRM, which ends the job.
+This limits GPU jobs only. CPU rules still apply: a long run goes
+    bin/pnprun -c 1 -- bin/gpurun -- cmd ...
+"""
+import fcntl, os, signal, sys
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SLOTS = os.environ.get("PNP_SLOTS") or os.path.join(ROOT, ".slots")
+LOCK = os.environ.get("GPUKIT_LOCK") or os.path.join(SLOTS, "gpu.lock")
+
+
+def main():
+    a = sys.argv[1:]
+    os.makedirs(os.path.dirname(LOCK), exist_ok=True)
+    fd = os.open(LOCK, os.O_RDWR | os.O_CREAT, 0o644)
+    if a and a[0] == "--status":
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            print("gpu: free")
+        except OSError:
+            print("gpu: held by", os.pread(fd, 300, 0).decode(errors="replace").strip() or "?")
+        return 0
+    nowait, tmax = False, None
+    while a and a[0] != "--":
+        if a[0] == "--nowait": nowait = True; a = a[1:]
+        elif a[0] == "-t": tmax = float(a[1]); a = a[2:]
+        else: sys.exit(__doc__)
+    if not a or a[0] != "--" or len(a) < 2:
+        sys.exit(__doc__)
+    cmd = a[1:]
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        if nowait:
+            sys.exit("gpurun: GPU is busy")
+        print("gpurun: GPU is busy, waiting...", file=sys.stderr, flush=True)
+        fcntl.flock(fd, fcntl.LOCK_EX)
+    os.ftruncate(fd, 0)
+    os.pwrite(fd, f"pid {os.getpid()} cmd {' '.join(cmd)[:160]}\n".encode(), 0)
+    os.set_inheritable(fd, True)          # the exec()ed job keeps the descriptor, hence the lock
+    os.environ["GPURUN_HELD"] = "1"
+    if tmax:
+        signal.alarm(max(1, int(tmax)))   # survives exec; default action terminates the job
+    try:
+        os.execvp(cmd[0], cmd)
+    except OSError as e:
+        sys.exit(f"gpurun: cannot run {cmd[0]}: {e}")
+
+
+if __name__ == "__main__":
+    sys.exit(main())

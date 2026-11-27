@@ -1,0 +1,15 @@
+#!/bin/sh
+# satpy — run a Python script with the toolkit's py/ on the path and python-sat (CaDiCaL, Kissat, Glucose, RC2 ...)
+# available.  Interpreter: $PNP_PYTHON, else python3 (needs Python >= 3.10).  Install the solvers with:
+#     pip install python-sat
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+PY="${PNP_PYTHON:-python3}"
+if ! command -v "$PY" >/dev/null 2>&1; then
+  echo "satpy: no Python interpreter '$PY' (set PNP_PYTHON to a Python >= 3.10)" >&2; exit 127
+fi
+if ! "$PY" -c 'import pysat.solvers' >/dev/null 2>&1; then
+  echo "satpy: python-sat is not installed for $PY. Install it with:  $PY -m pip install python-sat" >&2
+  echo "       (or point PNP_PYTHON at an interpreter / venv that has it)" >&2
+  exit 3
+fi
+PYTHONPATH="$ROOT/py${PYTHONPATH:+:$PYTHONPATH}" exec "$PY" "$@"

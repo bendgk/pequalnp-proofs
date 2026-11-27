@@ -1,0 +1,16 @@
+# cktsls specs/kn6.spec basis=ao size=13 (and 5, or 8, not 0) requested=13 seed=1 islands=7 time=0.010s sym="(0 1)(2 3)(4 5)" fixed=13
+inputs 6
+or 2 3
+and 4 5
+or 0 1
+or 4 5
+and 2 3
+or 10 9
+or 11 8
+or 7 6
+and 13 12
+and 0 1
+or 11 15
+and 8 16
+or 14 17
+out 18

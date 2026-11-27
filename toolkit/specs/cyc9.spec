@@ -1,0 +1,4 @@
+type tt
+inputs 9
+outputs 1
+tt ffffffffffffffffffffffffffffffffffffffffffeafaeafffffaeaffeafaeafffffffffffffffffffff8c8ffc8f8c8ffffffffffc8f8c8fffff8c8ffc8f8c8

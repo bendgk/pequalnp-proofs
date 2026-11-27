@@ -1,0 +1,7 @@
+type tt
+inputs 8
+outputs 4
+tt eeeecccceeeeccccaaaa0000aaaa0000eeeecccceeeeccccaaaa0000aaaa0000
+tt eeeeeeeecccccccceeeeeeeeccccccccaaaaaaaa00000000aaaaaaaa00000000
+tt fff0ff00fff0ff00f0f00000f0f00000fff0ff00fff0ff00f0f00000f0f00000
+tt fff0fff0ff00ff00fff0fff0ff00ff00f0f0f0f000000000f0f0f0f000000000

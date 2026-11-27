@@ -1,0 +1,19 @@
+# build output
+/build/
+/bin/*
+!/bin/andsat
+!/bin/ckt2lean
+!/bin/cktsat
+!/bin/gpurun
+!/bin/leancheck
+!/bin/pnprun
+!/bin/pyrun
+!/bin/satpy
+*.o
+*.new
+# run-time state
+/.slots/
+/.cache/
+/runs/
+__pycache__/
+*.pyc

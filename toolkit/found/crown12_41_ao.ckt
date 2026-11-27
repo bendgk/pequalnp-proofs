@@ -1,0 +1,44 @@
+# crown12 from found/kn12_29_ao.ckt: z_i = x_i or y_i, then the K(12) circuit; size 41
+inputs 24
+or 0 12
+or 1 13
+or 2 14
+or 3 15
+or 4 16
+or 5 17
+or 6 18
+or 7 19
+or 8 20
+or 9 21
+or 10 22
+or 11 23
+or 32 35
+or 27 36
+or 33 35
+or 26 38
+or 26 34
+or 28 40
+or 28 31
+or 25 32
+or 43 42
+or 24 29
+or 25 45
+or 41 37
+or 31 33
+or 30 48
+or 27 34
+or 29 50
+or 30 51
+or 24 39
+or 52 44
+or 49 47
+and 49 47
+and 53 54
+and 46 55
+and 41 37
+and 52 44
+or 57 59
+or 56 61
+or 60 62
+or 58 63
+out 64

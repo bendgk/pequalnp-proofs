@@ -1,0 +1,4 @@
+#!/bin/sh
+# cktsat — exact circuit synthesis by SAT cube-and-conquer. See docs/cktsat.md.
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+exec "$ROOT/bin/satpy" "$ROOT/src/cktsat/cktsat.py" "$@"

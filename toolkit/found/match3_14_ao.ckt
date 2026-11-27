@@ -1,0 +1,17 @@
+# cktsls specs/match3.spec basis=ao size=14 (and 9, or 5, not 0) requested=14 seed=1 islands=1 time=3.450s
+inputs 9
+and 3 7
+and 3 8
+and 4 6
+or 9 11
+and 2 12
+and 5 6
+or 10 14
+and 1 15
+and 4 8
+and 5 7
+or 17 18
+and 0 19
+or 20 16
+or 21 13
+out 22
